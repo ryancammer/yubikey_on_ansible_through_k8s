@@ -1,0 +1,32 @@
+---
+- hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - apt:
+        name: [tmux, vim, jq, htop, fish, dnsutils]
+        update_cache: yes
+
+- name: Include main playbook after vagrant specific preps
+  import_playbook: playbook.yml
+
+- hosts: awx
+  gather_facts: false
+  become: false
+  tasks:
+    - lineinfile:
+        path: ~/.kube/config
+        regexp: '    server: https://10\.0\.2\.15:16443'
+        line: "    server: https://{{ awx_host }}:16443"
+    - name: Fetch ~/.kube/config to vagrant host
+      fetch:
+        src: ~/.kube/config
+        dest: ~/.kube/config
+        flat: yes
+    - name: Fetch ~/.tower_cli.cfg to vagrant host
+      fetch:
+        src: ~/.tower_cli.cfg
+        dest: ~/.tower_cli.cfg
+        flat: yes
+      when:
+        "not (lookup('env', 'SKIPAWX') | default('false', True) | bool)"

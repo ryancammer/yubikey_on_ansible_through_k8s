@@ -1,0 +1,26 @@
+- name: Deploy AWX
+  hosts: awx
+  become: false
+
+  roles:
+    - role: awx_k8s
+  post_tasks:
+    - name: Wait for AWX to become available
+      wait_for:
+        port: 30080
+        delay: 30
+        timeout: 1200
+
+    - shell: 'kubectl get secret -n awx infraawx-admin-password -o jsonpath="{.data.password}"'
+      register: get_secret
+      changed_when: false
+
+    - template:
+        src: tower_cli.cfg.j2
+        dest: ~/.tower_cli.cfg
+        mode: '0600'
+
+- name: Manage AWX
+  hosts: awx
+  roles:
+    - role: awx_config

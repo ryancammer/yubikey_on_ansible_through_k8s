@@ -1,0 +1,38 @@
+- name: Create Job Template check bmc alive
+  awx.awx.instance_group:
+    name: yubikey_volume_shared_instance_group
+    is_container_group: true
+    policy_instance_percentage: 100
+    policy_instance_minimum: 0
+    pod_spec_override: |
+      'apiVersion: v1
+      kind: Pod
+      metadata:
+        namespace: awx
+      spec:
+        serviceAccountName: default
+        automountServiceAccountToken: false
+        volumes:
+          - name: sshagent
+            hostPath:
+              path: /tmp/ssh-agent-sock
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+        containers:
+          - image: 'quay.io/ansible/awx-ee:latest'
+            volumeMounts:
+              - mountPath: /tmp/ssh-agent-sock
+                name: sshagent
+            name: worker
+            env:
+              - name: SSH_AUTH_SOCK
+                value: /tmp/ssh-agent-sock/auth.sock
+            args:
+              - ansible-runner
+              - worker
+              - '--private-data-dir=/runner'
+            resources:
+              requests:
+                cpu: 250m
+                memory: 100Mi'

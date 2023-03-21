@@ -1,0 +1,4 @@
+host: http://{{ awx_host }}:80
+username: admin
+password: {{ get_secret.stdout|b64decode }}
+verify_ssl: false

@@ -1,0 +1,19 @@
+---
+- hosts: all
+  become: yes
+
+  tasks:
+    - name: Add PPA for yubikey
+      apt_repository:
+        repo: ppa:yubico/stable
+        state: present
+
+    - name: Ensure yubikey packages are present
+      package:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - openssh-client
+#        - yubikey-manager
+#        - opensc
+#        - opensc-pkcs11

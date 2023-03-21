@@ -1,0 +1,55 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: yubikey-host-daemonset
+  namespace: awx
+  labels:
+    app: yubikey-host-daemonset
+spec:
+  selector:
+    matchLabels:
+      name: yubikey-host-daemonset
+  template:
+    metadata:
+      labels:
+        name: yubikey-host-daemonset
+    spec:
+      tolerations:
+      # this toleration is to have the daemonset runnable on master nodes
+      # remove it if your masters can't run pods
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      volumes:
+        - name: hidraw1
+          hostPath:
+            path: /dev/hidraw1
+        - name: sshagent
+          hostPath:
+            path: /opt/yksecure/ssh-agent-sock
+      containers:
+      - name: yubikey-host-daemonset
+        image: ryancammer/hsm_auth_ubuntu
+        tty: true
+        command: ["/bin/sh"]
+        args: ["-c", "/usr/local/bin/configure_hsm_with_ssh_agent"]
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /dev/hidraw1
+          name: hidraw1
+        - mountPath: /opt/yksecure/ssh-agent-sock
+          name: sshagent
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        restartPolicy: OnFailure
+        resources:
+          limits:
+            memory: 400Mi
+          requests:
+            cpu: 200m
+            memory: 400Mi
+      terminationGracePeriodSeconds: 30

@@ -1,0 +1,45 @@
+---
+- name: Ensure the myapp Namespace exists.
+  k8s:
+    api_version: v1
+    kind: Namespace
+    name: awx
+    state: present
+
+- name: Ensure kustomization working dir
+  file:
+    path: "{{ awx_kustomization_dir }}"
+    state: directory
+
+- name: Create kustomization.yaml
+  template:
+    src: kustomization.yaml.j2
+    dest: "{{ awx_kustomization_dir }}/kustomization.yaml"
+
+- name: Create daemonset.yaml
+  template:
+    src: daemonset.yaml.j2
+    dest: "{{ awx_kustomization_dir }}/daemonset.yaml"
+
+- name: Execute kustomize
+  shell: "kubectl kustomize {{ awx_kustomization_dir }}"
+  register: kustomize
+  changed_when: false
+
+- name: k8s apply for AWX CRD
+  k8s:
+    definition: "{{ kustomize.stdout }}"
+
+- name: k8s apply for AWX service
+  k8s:
+    state: present
+    definition:
+      apiVersion: awx.ansible.com/v1beta1
+      kind: AWX
+      metadata:
+        name: infraawx
+        namespace: awx
+      spec:
+        service_type: NodePort
+        nodeport_port: 30080
+        ingress_type: ingress

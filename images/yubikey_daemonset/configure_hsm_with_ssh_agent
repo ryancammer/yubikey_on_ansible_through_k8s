@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e
+
+key=$(socat -lu STDIO TCP-LISTEN:9999,reuseaddr)
+[ "$key" ] || die "Key not set."
+
+export SOCKET_FILE_PATH=/opt/yksecure/ssh-agent-sock/auth.sock
+eval "$(ssh-agent -a $SOCKET_FILE_PATH)"
+
+# pcscd needs to be running before the Yubikey can be accessed.
+eval "pcscd &"
+
+export OPENSC_LIBS=/usr/lib/x86_64-linux-gnu
+{ sleep .1; echo "$key"; } | script -q /tmp/logged_operations_ssh_add.txt -c "ssh-add -s $OPENSC_LIBS/opensc-pkcs11.so"
+
+# Run this script so that it never terminates. This is so the DaemonSet will continue to run.
+tail -f /dev/null

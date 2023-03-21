@@ -1,0 +1,4 @@
+---
+
+- include: roles/awx_config/tasks/create_instance_groups.yml
+  run_once: true

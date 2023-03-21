@@ -1,0 +1,39 @@
+---
+- name: Setup Yubikey
+  import_playbook: yubikey.yml
+
+- name: Setup basic microk8s and host
+  hosts: awx
+  gather_facts: true
+  become: true
+  pre_tasks:
+    - name: Ensure pip is installed
+      package:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - python3-pip
+    - pip:
+        name:
+          - kubernetes
+  roles:
+    - role: gepaplexx.microk8s
+      vars:
+        is_master: true
+        microk8s_plugins:
+          dashboard: true
+          dns: true
+          helm3: true
+          #rbac: true
+          storage: true
+          ingress: true
+        microk8s_users: ["{{ ansible_facts.env.SUDO_USER }}"]
+  post_tasks:
+    - name: reset ssh connection
+      meta: reset_connection
+
+- name: Deploy AWX
+  import_playbook: awx.yml
+  when:
+    "not (lookup('env', 'SKIPAWX') | default('false', True) | bool)"
+
